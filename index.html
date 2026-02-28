@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CubeMaster Pro</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body{font-family:Arial;text-align:center;background:#121212;color:white;margin:0}
+h1{margin-top:40px}
+#timer{font-size:60px;margin-top:30px}
+button{padding:10px 20px;margin:10px;font-size:18px}
+</style>
+</head>
+<body>
+
+<h1>CubeMaster Pro</h1>
+<div id="timer">0.000</div>
+<button onclick="start()">Start</button>
+<button onclick="stop()">Stop</button>
+
+<script>
+let startTime, interval;
+function start(){
+startTime=Date.now();
+interval=setInterval(()=>{
+let t=(Date.now()-startTime)/1000;
+document.getElementById("timer").innerText=t.toFixed(3);
+},10);
+}
+function stop(){
+clearInterval(interval);
+}
+</script>
+
+</body>
+</html>
