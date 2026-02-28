@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CubeMaster Pro</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+<script src="chart.min.js"></script>
+</head>
+<body>
+
+<header>
+<h1>CubeMaster Pro</h1>
+<button id="themeToggle">🌙</button>
+<select id="userSelect"></select>
+<button onclick="createUser()">+ User</button>
+</header>
+
+<main>
+<div class="timer">
+<div id="inspection">15</div>
+<div id="display">0.000</div>
+</div>
+
+<div class="buttons">
+<button onclick="plus2()">+2</button>
+<button onclick="dnf()">DNF</button>
+</div>
+
+<div class="stats">
+<p>AO5: <span id="ao5">-</span></p>
+<p>AO12: <span id="ao12">-</span></p>
+<canvas id="progressChart"></canvas>
+</div>
+</main>
+
+<script src="app.js"></script>
+<script src="learning.js"></script>
+</body>
+</html>
+body{font-family:Arial;text-align:center;background:#121212;color:white;margin:0;transition:0.3s}
+header{display:flex;justify-content:space-between;padding:10px;background:#1e1e1e}
+button{padding:10px 20px;margin:5px;border:none;background:#00ffcc;color:#000;cursor:pointer;border-radius:8px}
+.timer{font-size:60px;margin-top:40px}
+#inspection{color:#00ffcc;font-size:30px}
+.light{background:white;color:black}
+@media(max-width:768px){.timer{font-size:40px}button{padding:8px 16px}}
+{
+"name": "CubeMaster Pro",
+"short_name": "CubePro",
+"start_url": "index.html",
+"display": "standalone",
+"background_color": "#121212",
+"theme_color": "#00ffcc",
+"icons":[
+{"src":"icons/icon-192.png","sizes":"192x192","type":"image/png"},
+{"src":"icons/icon-512.png","sizes":"512x512","type":"image/png"}
+]
+}
+const CACHE="cubepro-v3";
+const FILES=["/","/index.html","/styles.css","/app.js","/learning.js","/manifest.json","/chart.min.js"];
+self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});
+self.addEventListener("fetch",e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});
+// Offline Storage / Multi-user
+let users=JSON.parse(localStorage.getItem("users")||"[]");
+let currentUser=0;
+
+function createUser(){
+let name=prompt("Naam?");
+if(!name) return;
+users.push({name:name,solves:[],xp:0,level:"Beginner"});
+currentUser=users.length-1;
+localStorage.setItem("users",JSON.stringify(users));
+updateUserSelect();
+}
+
+function updateUserSelect(){
+let sel=document.getElementById("userSelect");
+sel.innerHTML="";
+users.forEach((u,i)=>{let opt=document.createElement("option");opt.value=i;opt.innerText=u.name;sel.appendChild(opt)});
+sel.value=currentUser;
+sel.onchange=()=>{currentUser=sel.value;updateStats();}
+}
+updateUserSelect();
+
+// Timer
+let running=false,startTime,inspection=15,inspectionInterval,timerInterval;
+const display=document.getElementById("display");
+const inspectionDisplay=document.getElementById("inspection");
+
+document.addEventListener("keydown",e=>{
+if(e.code==="Space"){
+if(!running){startInspection()}else{stopTimer()}}});
+
+function startInspection(){
+inspection=15;inspectionDisplay.innerText=inspection;
+inspectionInterval=setInterval(()=>{
+inspection--;inspectionDisplay.innerText=inspection;
+if(inspection<=0){clearInterval(inspectionInterval);startTimer();}},1000);
+}
+
+function startTimer(){
+running=true;startTime=Date.now();
+playSound("start");
+timerInterval=setInterval(()=>{
+let t=(Date.now()-startTime)/1000;
+display.innerText=t.toFixed(3);},10);
+}
+
+function stopTimer(){
+running=false;clearInterval(timerInterval);
+let t=parseFloat(display.innerText);
+if(!isNaN(t)){
+users[currentUser].solves.push(t);
+users[currentUser].xp+=10;
+addDailyXP();
+updateLevel();
+localStorage.setItem("users",JSON.stringify(users));
+updateStats();
+playSound("stop");}}
+
+function plus2(){let last=users[currentUser].solves.pop();users[currentUser].solves.push(last+2);updateStats();}
+function dnf(){users[currentUser].solves.push(null);updateStats();}
+
+function average(count){
+let arr=users[currentUser].solves.filter(x=>x!=null);
+if(arr.length<count) return "-";
+let slice=arr.slice(-count).sort((a,b)=>a-b);
+slice.shift();slice.pop();
+return (slice.reduce((a,b)=>a+b)/(count-2)).toFixed(3);
+}
+
+function updateStats(){
+document.getElementById("ao5").innerText=average(5);
+document.getElementById("ao12").innerText=average(12);
+updateChart();
+}
+
+function updateLevel(){
+let xp=users[currentUser].xp;
+let l="Beginner";
+if(xp>500) l="Intermediate";
+if(xp>2000) l="Advanced";
+if(xp>5000) l="Expert";
+if(xp>10000) l="Elite";
+users[currentUser].level=l;
+}
+
+// Chart.js
+let chart=new Chart(document.getElementById("progressChart"),{
+type:"line",
+data:{labels:[],datasets:[
+{label:"Solves",data:[],borderColor:"#00ffcc",fill:false},
+{label:"XP",data:[],borderColor:"#ffcc00",fill:false}
+]}
+});
+
+function updateChart(){
+let data=users[currentUser].solves.map(x=>x||0);
+chart.data.labels=data.map((_,i)=>i+1);
+chart.data.datasets[0].data=data;
+chart.update();
+}
+
+// Dark/Light toggle
+document.getElementById("themeToggle").onclick=()=>{document.body.classList.toggle("light");}
+
+// Sounds
+function playSound(name){
+let audio=new Audio();
+audio.src=name==="start"?"https://freesound.org/data/previews/66/66717_931655-lq.mp3":"https://freesound.org/data/previews/66/66717_931655-lq.mp3";
+audio.play();}
+
+// Daily streak / XP bonus
+let today=new Date().toISOString().slice(0,10);
+let lastDay=localStorage.getItem("lastChallengeDay");
+if(lastDay!==today){
+alert("Nieuwe dagelijkse challenge! Los 10 solves op voor bonus XP!");
+localStorage.setItem("lastChallengeDay",today);
+}
+
+function addDailyXP(){
+let streak=parseInt(localStorage.getItem("streak")||"0");
+streak++;
+users[currentUser].xp+=50*streak;
+localStorage.setItem("streak",streak);
+updateLevel();
+updateStats();
+}
+async function loadLearning(){
+const f2l=await fetch("learning-data/f2l.json").then(r=>r.json());
+const oll=await fetch("learning-data/oll.json").then(r=>r.json());
+const pll=await fetch("learning-data/pll.json").then(r=>r.json());
+renderLearning(f2l,"F2L");
+renderLearning(oll,"OLL");
+renderLearning(pll,"PLL");
+renderDrills();
+}
+
+function renderLearning(data,title){
+const main=document.querySelector("main");
+let section=document.createElement("section");
+section.innerHTML=`<h2>${title} Training</h2>`;
+data.forEach(d=>{
+let div=document.createElement("div");
+div.style.border="1px solid #00ffcc";
+div.style.padding="8px";
+div.style.margin="5px";
+div.innerHTML=`<h3>${d.case}</h3>
+<p>${d.description}</p>
+<p>Tips: ${d.tips.join(", ")}</p>
+<p>Example: <code>${d.example}</code></p>`;
+section.appendChild(div);
+});
+main.appendChild(section);
+}
+
+function renderDrills(){
+const main=document.querySelector("main");
+let section=document.createElement("section");
+section.innerHTML="<h2>TPS & Lookahead Drills</h2>";
+let drill=document.createElement("div");
+drill.innerHTML="<p>30 seconden cross drill. Plan elke F2L pair tijdens insert.</p>";
+section.appendChild(drill);
+main.appendChild(section);
+}
+
+loadLearning();
