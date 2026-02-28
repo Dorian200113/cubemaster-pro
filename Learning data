@@ -1,0 +1,53 @@
+cubemaster-pro/
+│
+├── index.html
+├── app.js
+├── learning.js
+├── styles.css
+├── service-worker.js
+├── manifest.json
+├── chart.min.js
+├── icons/
+│   ├── icon-192.png
+│   └── icon-512.png
+└── learning-data/   <-- NIEUWE MAP
+    ├── f2l.json
+    ├── oll.json
+    └── pll.json
+function renderNotation(){
+  const main=document.querySelector("main");
+  let section=document.createElement("section");
+  section.innerHTML="<h2>Cube Notatie Leerstof</h2>";
+  
+  const notations=[
+    {symbol:"R",desc:"Right face clockwise"},
+    {symbol:"R'",desc:"Right face counterclockwise"},
+    {symbol:"L",desc:"Left face clockwise"},
+    {symbol:"L'",desc:"Left face counterclockwise"},
+    {symbol:"U",desc:"Up face clockwise"},
+    {symbol:"U'",desc:"Up face counterclockwise"},
+    {symbol:"D",desc:"Down face clockwise"},
+    {symbol:"D'",desc:"Down face counterclockwise"},
+    {symbol:"F",desc:"Front face clockwise"},
+    {symbol:"F'",desc:"Front face counterclockwise"},
+    {symbol:"B",desc:"Back face clockwise"},
+    {symbol:"B'",desc:"Back face counterclockwise"},
+    {symbol:"M",desc:"Middle layer vertical turn"},
+    {symbol:"E",desc:"Equator layer horizontal turn"},
+    {symbol:"S",desc:"Standing layer turn"}
+  ];
+
+  notations.forEach(n=>{
+    let div=document.createElement("div");
+    div.style.border="1px solid #00ffcc";
+    div.style.padding="8px";
+    div.style.margin="5px";
+    div.innerHTML=`<strong>${n.symbol}</strong>: ${n.desc}`;
+    section.appendChild(div);
+  });
+
+  main.appendChild(section);
+}
+
+// Voeg bovenaan aan learning.js toe:
+renderNotation();
